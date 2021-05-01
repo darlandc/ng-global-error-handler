@@ -1,3 +1,4 @@
+import { genericRetryStrategy } from './utils/retry';
 import {
   Component,
   Injector,
@@ -12,6 +13,9 @@ import { TransferState, makeStateKey } from '@angular/platform-browser';
 const configKey = makeStateKey('CONFIG');
 import { TestService } from './services/test.service';
 import * as Sentry from '@sentry/browser';
+import { retryWhen } from 'rxjs/internal/operators/retryWhen';
+import { of } from 'rxjs/internal/observable/of';
+import { catchError } from 'rxjs/operators';
 declare var webkitSpeechRecognition: any;
 
 @Component({
@@ -22,64 +26,18 @@ export class AppComponent implements OnInit {
   public title: string;
   public errorText: string;
   public errBlock: boolean;
-  @ViewChild('gSearch') formSearch;
-  @ViewChild('searchKey') hiddenSearchHandler;
-  constructor(
-    private injector: Injector,
-    public srv: TestService,
-    private state: TransferState,
-    @Inject(PLATFORM_ID) private platformid: object,
-    private renderer: Renderer2
-  ) {
-    this.title = 'Voice Search Demo';
-    if (isPlatformServer(this.platformid)) {
-      const envJson = this.injector.get('CONFIG')
-        ? this.injector.get('CONFIG')
-        : {};
-      this.state.set(configKey, envJson as any);
-    }
-  }
+
+  constructor(public srv: TestService) {}
 
   ngOnInit(): void {
-    this.srv.getData().subscribe(
-      data => {
-        console.log('data returned from server', data);
-      },
-      error => {
-        this.errBlock = true;
-        this.errorText = error.message;
-      }
-    );
-  }
-
-  public voiceSearch() {
-    try {
-      if ('webkitSpeechRecognition' in window) {
-        const vSearch = new webkitSpeechRecognition();
-        vSearch.continuous = false;
-        vSearch.interimresults = false;
-        vSearch.lang = 'en-US';
-        vSearch.start();
-        const voiceSearchForm = this.formSearch.nativeElement;
-        const voiceHandler = this.hiddenSearchHandler.nativeElement;
-        console.log(voiceSearchForm);
-        vSearch.onresult = e => {
-          console.log(voiceSearchForm);
-          voiceHandler.value = e.results[0][0].transcript;
-          vSearch.stop();
-          console.log(voiceHandler);
-          voiceSearchForm.submit();
-        };
-
-        vSearch.onerror = e => {
-          console.log(e);
-          vSearch.stop();
-        };
-      } else {
-        console.log(this.state.get(configKey, undefined as any));
-      }
-    } catch (e) {
-      Sentry.captureException(e);
-    }
+    this.srv
+      .getData()
+      .subscribe(
+        res => console.log(res),
+        err => {
+          this.errBlock = true;
+          this.errorText = err.message;
+        }
+      );
   }
 }

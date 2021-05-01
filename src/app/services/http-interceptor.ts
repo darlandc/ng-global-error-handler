@@ -1,3 +1,5 @@
+import { genericRetryStrategy } from './../utils/retry';
+import { retryWhen } from 'rxjs/internal/operators/retryWhen';
 import {
   HttpEvent,
   HttpInterceptor,
@@ -15,6 +17,7 @@ export class HttpIntercept implements HttpInterceptor {
     next: HttpHandler
   ): Observable<HttpEvent<any>> {
     return next.handle(request).pipe(
+      retryWhen(genericRetryStrategy()),
       catchError((error: HttpErrorResponse) => {
         if (error instanceof HttpErrorResponse) {
           // server-side error
